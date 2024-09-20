@@ -2,14 +2,15 @@
 #define DIRTRAVELER_H
 
 #include <boost/filesystem.hpp>
-#include <iostream>
+
 
 class TravelerInterface {
 protected:
+	using EntryList = std::vector<boost::filesystem::directory_entry>;
 public:
 	virtual ~TravelerInterface() = default;
 
-	virtual void getFiles() = 0;
+	virtual EntryList getFiles() = 0;
 };
 
 template <typename Iterator>
@@ -18,18 +19,19 @@ class DirTraveler : public TravelerInterface {
 public:
 	DirTraveler(const boost::filesystem::path& dir) : m_path(dir) {}
 
+	/*
+	 * Попытка сделать универсальную работу с фильтрами
+	 * - Директории для исключения
+	 * - Минимальный размер файла
+	 * - Фильтрация по маске
+	 */
 	void addFilter(FilterFunction filter_function);
-	void getFiles() override;
+	EntryList getFiles() override;
 
 private:
 	boost::filesystem::path m_path;
 	std::vector<FilterFunction> m_filters;
 };
-
-template<typename Type>
-void printer(Type value) {
-	std::cout << __PRETTY_FUNCTION__ << std::endl;
-}
 
 template<typename Iterator>
 void DirTraveler<Iterator>::addFilter(FilterFunction filter_function)
@@ -38,8 +40,9 @@ void DirTraveler<Iterator>::addFilter(FilterFunction filter_function)
 }
 
 template<typename Iterator>
-void DirTraveler<Iterator>::getFiles()
+TravelerInterface::EntryList DirTraveler<Iterator>::getFiles()
 {
+	EntryList result;
 	auto begin = Iterator(m_path);
 	auto end = boost::filesystem::end(begin);
 	for (auto it = begin; it != end; ++it) {
@@ -50,12 +53,13 @@ void DirTraveler<Iterator>::getFiles()
 		if (!filtersPass) {
 			continue;
 		}
-		auto path = it->path();
-		if (boost::filesystem::is_directory(path)) {
+		if (!boost::filesystem::is_regular_file(*it)) {
 			continue;
 		}
-		std::cout << path << '\t' << boost::filesystem::file_size(path) << std::endl;
+		result.push_back(*it);
 	}
+
+	return result;
 }
 
 #endif // DIRTRAVELER_H

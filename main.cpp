@@ -6,6 +6,8 @@
 #include <type_traits>
 
 #include "dirtraveler.h"
+#include "hasher.h"
+#include "file.h"
 
 using namespace std;
 
@@ -47,7 +49,6 @@ unique_ptr<TravelerInterface> createTraveler(const po::variables_map &params) {
 			if (!fs::is_regular_file(*it)) {
 				return true;
 			}
-//			static const boost::regex mask("^.*\\.txt$");
 			static const boost::regex mask(params["mask"].as<string>());
 			return boost::regex_match(it->path().filename().string(), mask);
 		});
@@ -90,38 +91,40 @@ int main(int argc, const char *argv[])
 	} else {
 		treveler = createTraveler<fs::directory_iterator>(vm);
 	}
-	if (!treveler) {
-		cerr << __LINE__ << endl;
-		return 1;
+
+//	std::unique_ptr<HasherInterface> hasher;
+//	if (vm["algoritm"].as<string>() == "md5") {
+//		hasher.reset(new MD5Hasher());
+//	} else {
+//		hasher.reset(new Crc32Hasher());
+//	}
+//	if (!hasher || !treveler) {
+//		cerr << "Error: " << __LINE__ << endl;
+//		return 1;
+//	}
+
+	auto fileEntry = treveler->getFiles();
+
+	FileList<Crc32Hasher, 5> files;
+	files.reserve(fileEntry.size());
+	for (auto entry : fileEntry) {
+		files.push_back({entry});
 	}
 
-	//	if (vm.count("ignore")) {
-	// Добавляем фильтр на игнорирование папки
-	// Подумать как сделать
-	//		ptr->addFilter([](fs::directory_entry itr) {
-	//			if (fs::is_directory(itr)) {
-	//				cout << itr << endl;
-	//				fs::
-	//			}
-	//			return true;
-	//		});
-	//	}
+	FileList<Crc32Hasher, 5> result;
 
-	//	if (vm.count("minSize")) {
-	//		size_t minSize = vm["minSize"].as<size_t>();
-	//		ptr->addFilter([minSize](fs::directory_entry it) {
-	//			if (fs::is_directory(it)) {
-	//				return true;
-	//			}
-	//			return fs::file_size(it) >= minSize;
-	//		});
-	//	}
+	for (int i = 0; i < files.size(); ++i) {
+		for (int j = files.size() - 1; j > i ;  --j) {
+			if (files[i] == files[j]) {
+				result.push_back(files[i]);
+				result.push_back(files[j]);
+			}
+		}
+	}
 
-	//	if (vm.count("ignore")) {
-	//		cout << "Ignore " << vm["ignore"].as<string>() << endl;
-	//	}
-
-	treveler->getFiles();
+	for (auto file : result) {
+		file.print();
+	}
 
 	return 0;
 }

@@ -9,7 +9,7 @@ include_directories(${Boost_INCLUDE_DIR})
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(bayan main.cpp dirtraveler.h)
+add_executable(bayan main.cpp dirtraveler.h file.h file.h file.cpp hasher.h hasher.cpp)
 
 target_link_libraries(bayan
         ${Boost_LIBRARIES}
