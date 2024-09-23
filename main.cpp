@@ -68,16 +68,17 @@ unique_ptr<TravelerInterface> createTraveler(const po::variables_map &params) {
 }
 
 bool getOptions(int argc, const char *argv[], po::variables_map &map) {
-	po::options_description desc{""};
+	// ToDo Добавить валидацию пльзовательского ввода
+	po::options_description desc{"Parameters"};
 	desc.add_options()
-			("help,h", "Показать эту справку и выйти")
-			("dir,d", po::value<vector<fs::path>>()->multitoken(), "Папка для сканирования")
-			("exeption,e", po::value<vector<string>>()->multitoken(), "Папаки исключения")
-			("recursive,r", "Рекурсивно показывать каталоги")
-			("minsize,s", po::value<size_t>()->default_value(1),"Минимальный размер файла")
-			("mask,m", po::value<string>(), "Маска разрешенных имен файлов")
-			("block-size",po::value<size_t>()->default_value(5), "Размер блока (S)")
-			("algoritm", po::value<string>()->default_value("crc32"), "Алгоритм сравнения crc32/md5");
+			("help,h", "Show help and close")
+			("dir,d", po::value<vector<fs::path>>()->multitoken(), "Dir for search")
+			("exeption,e", po::value<vector<string>>()->multitoken(), "Exception dir")
+			("recursive,r", "Recursive search")
+			("minsize,s", po::value<size_t>()->default_value(1),"Min mile size")
+			("mask,m", po::value<string>(), "Filter mask")
+			("block-size",po::value<size_t>()->default_value(5), "BlockSize")
+			("algoritm", po::value<string>()->default_value("crc32"), "Hash algoritm (src32, md5)");
 	po::store(parse_command_line(argc, argv, desc), map);
 	po::notify(map);
 
