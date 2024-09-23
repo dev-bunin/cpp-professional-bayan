@@ -4,24 +4,23 @@
 #include <cstdint>
 #include <cstddef>
 
-class HasherInterface
-{
+class HasherInterface {
 public:
 	virtual uint32_t getChecksum(char *data, size_t size) const = 0;
 };
 
-class MD5Hasher {
+class MD5Hasher : public HasherInterface {
 public:
 	MD5Hasher() = default;
 
-	static uint32_t getChecksum(char *data, size_t size);
+	uint32_t getChecksum(char *data, size_t size) const override;
 };
 
-class Crc32Hasher {
+class Crc32Hasher : public HasherInterface {
 public:
 	Crc32Hasher() = default;
 
-	static uint32_t getChecksum(char *data, size_t size);
+	uint32_t getChecksum(char *data, size_t size) const override;
 };
 
 #endif // HASHER_H

@@ -5,7 +5,7 @@
 
 using namespace boost::uuids::detail;
 
-uint32_t MD5Hasher::getChecksum(char *data, size_t size)
+uint32_t MD5Hasher::getChecksum(char *data, size_t size) const
 {
 	md5 hash;
 	md5::digest_type digest;
@@ -16,7 +16,7 @@ uint32_t MD5Hasher::getChecksum(char *data, size_t size)
 	return reinterpret_cast<uint32_t>(*digest);
 }
 
-uint32_t Crc32Hasher::getChecksum(char *data, size_t size)
+uint32_t Crc32Hasher::getChecksum(char *data, size_t size) const
 {
 	boost::crc_32_type hash;
 	hash.process_bytes(data, size);

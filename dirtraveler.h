@@ -17,7 +17,7 @@ template <typename Iterator>
 class DirTraveler : public TravelerInterface {
 	using FilterFunction = std::function<bool (Iterator)>;
 public:
-	DirTraveler(const boost::filesystem::path& dir) : m_path(dir) {}
+	DirTraveler(const std::vector<boost::filesystem::path>& dirs);
 
 	/*
 	 * Попытка сделать универсальную работу с фильтрами
@@ -26,12 +26,17 @@ public:
 	 * - Фильтрация по маске
 	 */
 	void addFilter(FilterFunction filter_function);
+
 	EntryList getFiles() override;
 
 private:
-	boost::filesystem::path m_path;
+	std::vector<boost::filesystem::path> m_dirs;
 	std::vector<FilterFunction> m_filters;
 };
+
+template<typename Iterator>
+DirTraveler<Iterator>::DirTraveler(const std::vector<boost::filesystem::path> &dirs)
+	: m_dirs(dirs) {}
 
 template<typename Iterator>
 void DirTraveler<Iterator>::addFilter(FilterFunction filter_function)
@@ -43,20 +48,22 @@ template<typename Iterator>
 TravelerInterface::EntryList DirTraveler<Iterator>::getFiles()
 {
 	EntryList result;
-	auto begin = Iterator(m_path);
-	auto end = boost::filesystem::end(begin);
-	for (auto it = begin; it != end; ++it) {
-		bool filtersPass = std::all_of(m_filters.begin(), m_filters.end(),
-									   [it](FilterFunction filter) {
-				return filter(it);;
-	});
-		if (!filtersPass) {
-			continue;
+	for (auto dir : m_dirs) {
+		auto begin = Iterator(dir);
+		auto end = boost::filesystem::end(begin);
+		for (auto it = begin; it != end; ++it) {
+			bool filtersPass = std::all_of(m_filters.begin(), m_filters.end(),
+										   [it](FilterFunction filter) {
+					return filter(it);;
+		});
+			if (!filtersPass) {
+				continue;
+			}
+			if (!boost::filesystem::is_regular_file(*it)) {
+				continue;
+			}
+			result.push_back(*it);
 		}
-		if (!boost::filesystem::is_regular_file(*it)) {
-			continue;
-		}
-		result.push_back(*it);
 	}
 
 	return result;

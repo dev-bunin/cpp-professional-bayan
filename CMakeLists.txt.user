@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 6.0.2, 2024-09-20T14:19:13. -->
+<!-- Written by QtCreator 6.0.2, 2024-09-23T16:05:59. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -300,13 +300,13 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">bayan</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">CMakeProjectManager.CMakeRunConfiguration.bayan</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">bayan</value>
-    <value type="QString" key="RunConfiguration.Arguments">-R --dir /home/user/Документы/test -I ignore</value>
+    <value type="QString" key="RunConfiguration.Arguments">-r -d &quot;/home/user/Документы/test&quot; &quot;/home/user/Документы/projects&quot; &quot;/home/user/Документы/otus&quot; -e ignore .git &quot;build-cpp-professional-bayan-Debug&quot; -m ^.*\\.txt$</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseLibrarySearchPath">true</value>
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>
-    <value type="QString" key="RunConfiguration.WorkingDirectory.default">/home/user/Документы/otus/build-bayan-Debug</value>
+    <value type="QString" key="RunConfiguration.WorkingDirectory.default">/home/user/Документы/otus/build-cpp-professional-bayan-Debug</value>
    </valuemap>
    <value type="int" key="ProjectExplorer.Target.RunConfigurationCount">1</value>
   </valuemap>

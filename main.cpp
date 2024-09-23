@@ -4,10 +4,11 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <type_traits>
+#include <unordered_set>
 
+#include "dublicatefinder.h"
 #include "dirtraveler.h"
 #include "hasher.h"
-#include "file.h"
 
 using namespace std;
 
@@ -16,13 +17,20 @@ namespace fs = boost::filesystem;
 
 template <typename Iterator>
 unique_ptr<TravelerInterface> createTraveler(const po::variables_map &params) {
-	unique_ptr<DirTraveler<Iterator>> result(new DirTraveler<Iterator>(params["dir"].as<fs::path>()));
+	unique_ptr<DirTraveler<Iterator>> result(new DirTraveler<Iterator>(params["dir"].as<vector<fs::path>>()));
 
-	if (params.count("ignore")) {
+	if (params.count("exeption")) {
 		result->addFilter([&params](Iterator it) {
+			if (!fs::is_directory(*it)) {
+				return true;
+			}
 			if constexpr (std::is_same<Iterator, fs::recursive_directory_iterator>::value) {
-				if (fs::is_directory(*it) &&
-						it->path().filename() == params["ignore"].as<string>()) {
+				// Для быстрого поиска
+				static unordered_set<string> exeptionDir = [&params]() {
+					auto exeptionDirVector = params["exeption"].as<vector<string>>();
+					return unordered_set<string>(exeptionDirVector.begin(), exeptionDirVector.end());
+				}();
+				if (exeptionDir.count(it->path().filename().string())) {
 					it.disable_recursion_pending();
 					return false;
 				}
@@ -34,15 +42,17 @@ unique_ptr<TravelerInterface> createTraveler(const po::variables_map &params) {
 		});
 	}
 
+	size_t minSize = 1;
 	if (params.count("minsize")) {
-		result->addFilter([&params](Iterator it) {
-			if (!fs::is_regular_file(*it)) {
-				return true;
-			}
-			static size_t minFileSize = params["minsize"].as<size_t>();
-			return fs::file_size(*it) >= minFileSize;
-		});
+		minSize = params["minsize"].as<size_t>();
 	}
+	result->addFilter([minSize](Iterator it) {
+		if (!fs::is_regular_file(*it)) {
+			return true;
+		}
+		static size_t minFileSize = minSize;
+		return fs::file_size(*it) >= minFileSize;
+	});
 
 	if (params.count("mask")) {
 		result->addFilter([&params](Iterator it) {
@@ -57,74 +67,56 @@ unique_ptr<TravelerInterface> createTraveler(const po::variables_map &params) {
 	return result;
 }
 
-int main(int argc, const char *argv[])
-{
-	size_t blockSize;
-
-	po::options_description desc{"Options"};
+bool getOptions(int argc, const char *argv[], po::variables_map &map) {
+	po::options_description desc{""};
 	desc.add_options()
 			("help,h", "Показать эту справку и выйти")
-			("dir", po::value<fs::path>()->default_value("./"), "Папка для сканирования")
-			("ignore,I", po::value<string>(), "Папаки исключения")
-			("recursive,R", "Рекурсивно показывать каталоги")
-			("minsize", po::value<size_t>()->default_value(1),"Минимальный размер файла")
-			("mask", po::value<string>(), "Маска разрешенных имен файлов")
-			("block-size", po::value<int>()->default_value(5), "Размер блока (S)")
+			("dir,d", po::value<vector<fs::path>>()->multitoken(), "Папка для сканирования")
+			("exeption,e", po::value<vector<string>>()->multitoken(), "Папаки исключения")
+			("recursive,r", "Рекурсивно показывать каталоги")
+			("minsize,s", po::value<size_t>()->default_value(1),"Минимальный размер файла")
+			("mask,m", po::value<string>(), "Маска разрешенных имен файлов")
+			("block-size",po::value<size_t>()->default_value(5), "Размер блока (S)")
 			("algoritm", po::value<string>()->default_value("crc32"), "Алгоритм сравнения crc32/md5");
-	po::variables_map vm;
-	po::store(parse_command_line(argc, argv, desc), vm);
-	po::notify(vm);
+	po::store(parse_command_line(argc, argv, desc), map);
+	po::notify(map);
 
-	if (vm.count("help")) {
-		std::cout << desc << endl;
+	if (map.count("help")) {
+		cout << desc << endl;
+		return false;
+	}
+
+	return true;
+}
+
+int main(int argc, const char *argv[])
+{
+	po::variables_map options;
+	if (!getOptions(argc, argv, options)) {
 		return 0;
 	}
 
-	if (!fs::is_directory(vm["dir"].as<fs::path>())) {
-		cerr << "Неверно задана дирректория для сканирования" << endl;
+	std::unique_ptr<TravelerInterface> treveler;
+	if (options.count("recursive")) {
+		treveler = createTraveler<fs::recursive_directory_iterator>(options);
+	} else {
+		treveler = createTraveler<fs::directory_iterator>(options);
+	}
+
+	std::unique_ptr<HasherInterface> hasher;
+	if (options["algoritm"].as<string>() == "md5") {
+		hasher.reset(new MD5Hasher());
+	} else {
+		hasher.reset(new Crc32Hasher());
+	}
+
+	if (!treveler || !hasher) {
 		return 1;
 	}
 
-	std::unique_ptr<TravelerInterface> treveler;
-	if (vm.count("recursive")) {
-		treveler = createTraveler<fs::recursive_directory_iterator>(vm);
-	} else {
-		treveler = createTraveler<fs::directory_iterator>(vm);
-	}
+	DublicateFinder finder(move(hasher), move(treveler), options["block-size"].as<size_t>());
 
-//	std::unique_ptr<HasherInterface> hasher;
-//	if (vm["algoritm"].as<string>() == "md5") {
-//		hasher.reset(new MD5Hasher());
-//	} else {
-//		hasher.reset(new Crc32Hasher());
-//	}
-//	if (!hasher || !treveler) {
-//		cerr << "Error: " << __LINE__ << endl;
-//		return 1;
-//	}
-
-	auto fileEntry = treveler->getFiles();
-
-	FileList<Crc32Hasher, 5> files;
-	files.reserve(fileEntry.size());
-	for (auto entry : fileEntry) {
-		files.push_back({entry});
-	}
-
-	FileList<Crc32Hasher, 5> result;
-
-	for (int i = 0; i < files.size(); ++i) {
-		for (int j = files.size() - 1; j > i ;  --j) {
-			if (files[i] == files[j]) {
-				result.push_back(files[i]);
-				result.push_back(files[j]);
-			}
-		}
-	}
-
-	for (auto file : result) {
-		file.print();
-	}
+	finder.printDublicates();
 
 	return 0;
 }
